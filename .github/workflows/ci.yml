@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  pull_request:
+
+# 同一Pull Requestで新しいコミットが送信された場合、古い実行を中止する。
+concurrency:
+  group: ci-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.x'
+
+      - name: Restore
+        run: dotnet restore AILogExport.slnx
+
+      - name: Verify formatting
+        run: dotnet format AILogExport.slnx --verify-no-changes --no-restore
+
+      - name: Build
+        run: >-
+          dotnet build AILogExport.slnx
+          --configuration Release
+          --no-restore
+          -m:1
+          -v:minimal
+          -p:ContinuousIntegrationBuild=true
+
+      - name: Test
+        run: >-
+          dotnet test AILogExport.slnx
+          --configuration Release
+          --no-build
+          --no-restore
+          -m:1
+          -v:minimal
+
+      # 公開はタグ用ワークフローに限定し、PRではパッケージを作成できることだけを検証する。
+      - name: Pack .NET Tool
+        run: >-
+          dotnet pack src/AILogExport/AILogExport.csproj
+          --configuration Release
+          --no-build
+          --no-restore
+          --output artifacts/packages
+          -p:PackageVersion=0.0.0-ci.${{ github.run_number }}
+          -p:ContinuousIntegrationBuild=true
+          -p:RepositoryCommit=${{ github.sha }}
