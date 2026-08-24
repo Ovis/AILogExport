@@ -59,3 +59,35 @@ jobs:
           -p:PackageVersion=0.0.0-ci.${{ github.run_number }}
           -p:ContinuousIntegrationBuild=true
           -p:RepositoryCommit=${{ github.sha }}
+
+      # リリース時に作成するWindows x64向けの両配布形式をPRでも検証する。
+      - name: Restore Windows x64 runtime
+        run: dotnet restore src/AILogExport/AILogExport.csproj --runtime win-x64
+
+      - name: Publish framework-dependent executable
+        run: >-
+          dotnet publish src/AILogExport/AILogExport.csproj
+          --configuration Release
+          --runtime win-x64
+          --self-contained false
+          --no-restore
+          --output artifacts/publish/win-x64-framework-dependent
+          -p:Version=0.0.0-ci.${{ github.run_number }}
+          -p:ContinuousIntegrationBuild=true
+          -p:RepositoryCommit=${{ github.sha }}
+
+      - name: Publish self-contained executable
+        run: >-
+          dotnet publish src/AILogExport/AILogExport.csproj
+          --configuration Release
+          --runtime win-x64
+          --self-contained true
+          --no-restore
+          --output artifacts/publish/win-x64-self-contained
+          -p:Version=0.0.0-ci.${{ github.run_number }}
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:DebugType=None
+          -p:DebugSymbols=false
+          -p:ContinuousIntegrationBuild=true
+          -p:RepositoryCommit=${{ github.sha }}

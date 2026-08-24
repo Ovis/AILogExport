@@ -76,6 +76,52 @@ jobs:
           -p:ContinuousIntegrationBuild=true
           -p:RepositoryCommit=${{ github.sha }}
 
+      # Windows向けpublishで必要になるランタイムパックを取得する。
+      - name: Restore Windows x64 runtime
+        run: dotnet restore src/AILogExport/AILogExport.csproj --runtime win-x64
+
+      - name: Publish framework-dependent executable
+        run: >-
+          dotnet publish src/AILogExport/AILogExport.csproj
+          --configuration Release
+          --runtime win-x64
+          --self-contained false
+          --no-restore
+          --output artifacts/publish/win-x64-framework-dependent
+          -p:Version=${{ steps.version.outputs.value }}
+          -p:ContinuousIntegrationBuild=true
+          -p:RepositoryCommit=${{ github.sha }}
+
+      # ランタイムと依存ライブラリを単一の実行ファイルへまとめる。
+      - name: Publish self-contained executable
+        run: >-
+          dotnet publish src/AILogExport/AILogExport.csproj
+          --configuration Release
+          --runtime win-x64
+          --self-contained true
+          --no-restore
+          --output artifacts/publish/win-x64-self-contained
+          -p:Version=${{ steps.version.outputs.value }}
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:DebugType=None
+          -p:DebugSymbols=false
+          -p:ContinuousIntegrationBuild=true
+          -p:RepositoryCommit=${{ github.sha }}
+
+      - name: Create executable archives
+        shell: bash
+        run: |
+          mkdir -p artifacts/release
+
+          pushd artifacts/publish/win-x64-framework-dependent
+          zip -r ../../release/AILogExport-v${{ steps.version.outputs.value }}-win-x64-framework-dependent.zip .
+          popd
+
+          pushd artifacts/publish/win-x64-self-contained
+          zip -r ../../release/AILogExport-v${{ steps.version.outputs.value }}-win-x64-self-contained.zip .
+          popd
+
       - name: Login to NuGet.org
         id: nuget-login
         uses: NuGet/login@v1
@@ -93,6 +139,8 @@ jobs:
         uses: softprops/action-gh-release@v3
         with:
           name: AILogExport v${{ steps.version.outputs.value }}
-          files: artifacts/nuget/*.nupkg
+          files: |
+            artifacts/nuget/*.nupkg
+            artifacts/release/*.zip
           generate_release_notes: true
           prerelease: ${{ steps.version.outputs.prerelease }}
