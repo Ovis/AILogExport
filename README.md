@@ -10,7 +10,20 @@ Claude CodeおよびCodexのローカルセッションログを、人間が読�
 
 ## 実行方法
 
-JSONLを直接指定して変換します。
+nuget.orgへの公開後は、グローバルToolとしてインストールできます。
+
+```powershell
+dotnet tool install --global eSheepDev.AILogExport
+ailogexport --help
+```
+
+インストール済みのToolを更新する場合は次のコマンドを使用します。
+
+```powershell
+dotnet tool update --global eSheepDev.AILogExport
+```
+
+ソースコードから実行する場合は、以下のようにJSONLを直接指定して変換します。
 
 ```powershell
 dotnet run --project src/AILogExport -- claude "C:\Users\...\session.jsonl" -o "D:\session.md"
@@ -49,8 +62,14 @@ Claude Codeの `subagents` 配下はVersion 1.0の対象外です。
 ## ビルドとテスト
 
 ```powershell
-dotnet build AILogExport.sln -m:1
-dotnet test AILogExport.sln -m:1
+dotnet build AILogExport.slnx -m:1
+dotnet test AILogExport.slnx -m:1
 ```
 
 詳細な仕様は[docs/specification.md](docs/specification.md)を参照してください。
+
+## リリース
+
+`v1.2.3` または `v1.2.3-beta.1` のようなタグをpushすると、GitHub ActionsがReleaseビルド、テスト、nuget.orgへの公開、GitHub Releaseの作成を行います。
+
+初回リリース前に必要なnuget.orgのTrusted Publishing設定と具体的な手順は[docs/releasing.md](docs/releasing.md)を参照してください。
