@@ -11,7 +11,7 @@ concurrency:
 
 jobs:
   publish:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
 
     permissions:
       contents: write
@@ -28,20 +28,20 @@ jobs:
 
       - name: Resolve package version
         id: version
-        shell: bash
+        shell: pwsh
         run: |
-          version="${GITHUB_REF_NAME#v}"
-          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z]+([.-][0-9A-Za-z]+)*)?$ ]]; then
-            echo "Tag must use v<major>.<minor>.<patch> or v<major>.<minor>.<patch>-<prerelease>." >&2
+          $version = $env:GITHUB_REF_NAME -replace '^v', ''
+          if ($version -notmatch '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z]+([.-][0-9A-Za-z]+)*)?$') {
+            Write-Error 'Tag must use v<major>.<minor>.<patch> or v<major>.<minor>.<patch>-<prerelease>.'
             exit 1
-          fi
+          }
 
-          echo "value=$version" >> "$GITHUB_OUTPUT"
-          if [[ "$version" == *-* ]]; then
-            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          "value=$version" >> $env:GITHUB_OUTPUT
+          if ($version.Contains('-')) {
+            'prerelease=true' >> $env:GITHUB_OUTPUT
           else
-            echo "prerelease=false" >> "$GITHUB_OUTPUT"
-          fi
+            'prerelease=false' >> $env:GITHUB_OUTPUT
+          }
 
       - name: Restore
         run: dotnet restore AILogExport.slnx
@@ -110,17 +110,15 @@ jobs:
           -p:RepositoryCommit=${{ github.sha }}
 
       - name: Create executable archives
-        shell: bash
+        shell: pwsh
         run: |
-          mkdir -p artifacts/release
-
-          pushd artifacts/publish/win-x64-framework-dependent
-          zip -r ../../release/AILogExport-v${{ steps.version.outputs.value }}-win-x64-framework-dependent.zip .
-          popd
-
-          pushd artifacts/publish/win-x64-self-contained
-          zip -r ../../release/AILogExport-v${{ steps.version.outputs.value }}-win-x64-self-contained.zip .
-          popd
+          New-Item -ItemType Directory -Force -Path artifacts/release | Out-Null
+          Compress-Archive `
+            -Path artifacts/publish/win-x64-framework-dependent/* `
+            -DestinationPath artifacts/release/AILogExport-v${{ steps.version.outputs.value }}-win-x64-framework-dependent.zip
+          Compress-Archive `
+            -Path artifacts/publish/win-x64-self-contained/* `
+            -DestinationPath artifacts/release/AILogExport-v${{ steps.version.outputs.value }}-win-x64-self-contained.zip
 
       - name: Login to NuGet.org
         id: nuget-login
@@ -129,11 +127,18 @@ jobs:
           user: Ovis
 
       - name: Push to NuGet.org
-        run: >-
-          dotnet nuget push artifacts/nuget/*.nupkg
-          --api-key ${{ steps.nuget-login.outputs.NUGET_API_KEY }}
-          --source https://api.nuget.org/v3/index.json
-          --skip-duplicate
+        shell: pwsh
+        run: |
+          $package = Get-ChildItem -Path artifacts/nuget -Filter *.nupkg -File | Select-Object -First 1
+          if ($null -eq $package) {
+            Write-Error 'NuGet package was not found.'
+            exit 1
+          }
+
+          dotnet nuget push $package.FullName `
+            --api-key ${{ steps.nuget-login.outputs.NUGET_API_KEY }} `
+            --source https://api.nuget.org/v3/index.json `
+            --skip-duplicate
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
