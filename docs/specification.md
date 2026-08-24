@@ -195,11 +195,31 @@ Assistantの応答がTool実行を挟んで複数のイベントに分割され�
 - ログ編集
 - Claude CodeまたはCodexへの再インポート
 
-## 9. 実装時に実データで確認する事項
+## 9. 実ログで確認した構造
 
-- Claude Codeにおける実ユーザー発言、Tool Result、meta messageの判別条件
-- Claude Codeのタイトル、セッションID、プロジェクトパス、日時の取得元
-- Codexにおける `session_meta` と `response_item` の現行構造
-- Codexの実ユーザー発言と内部注入メッセージの判別条件
-- Assistant応答を連結する境界
-- 入力元ごとのログ形式変更に対する許容範囲
+2026-08-24時点のローカル実ログで、次の構造を確認した。
+
+### 9.1 Claude Code
+
+- 実ユーザー発言は主にトップレベル `type=user`、`message.content` の文字列として記録される
+- Tool Resultも `type=user` だが、`message.content` が配列で `type=tool_result` のブロックとして記録される
+- Assistant本文は `type=assistant`、`message.content` 配列内の `type=text` から取得できる
+- `thinking` と `tool_use` はAssistantの別ブロックとして識別できる
+- セッションIDは `sessionId` または `session_id`、プロジェクトパスは `cwd`、タイトルは `type=ai-title` の `aiTitle` から取得できる
+- `isMeta=true`、`isSidechain=true`、内部コマンド表現は通常会話から除外する
+- `<session-id>\subagents` 配下にはサブエージェント用JSONLが存在する
+
+### 9.2 Codex
+
+- セッション情報はトップレベル `type=session_meta` の `payload` に記録される
+- セッションIDは `payload.id` または `payload.session_id`、プロジェクトパスは `payload.cwd` から取得できる
+- 会話はトップレベル `type=response_item`、`payload.type=message` として記録される
+- User本文は `role=user` の `input_text`、Assistant本文は `role=assistant` の `output_text` から取得できる
+- `role=developer`、`payload.type=reasoning`、Tool Call／Result、`event_msg` は通常会話から除外する
+- 推奨プラグイン、`AGENTS.md`、実行環境などが `role=user` の内部コンテキストとして記録される場合があるため、既知の内部ブロックを除外する
+
+### 9.3 共通の実装条件
+
+- Tool実行を挟んだAssistant本文は、次の実ユーザー発言まで連結する
+- AIクライアントが追記中のJSONLも読めるよう、ファイルを共有読み取りで開く
+- ログ形式は外部ツールの更新により変わり得るため、Parserを入力元ごとに分離し、合成JSONLを使った回帰テストで判別条件を固定する
