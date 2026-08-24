@@ -19,6 +19,23 @@ internal sealed class TestDirectory : IDisposable
     /// </summary>
     public string Path { get; }
 
+    /// <summary>
+    /// 指定した各文字列を一行のJSONとして一時ファイルへ書き込む。
+    /// </summary>
+    public string WriteJsonl(params string[] lines) => WriteJsonlAt("session.jsonl", lines);
+
+    /// <summary>
+    /// 相対パスを指定してJSONLテストデータを書き込む。
+    /// </summary>
+    public string WriteJsonlAt(string relativePath, params string[] lines)
+    {
+        var filePath = System.IO.Path.Combine(Path, relativePath);
+        var parentDirectory = System.IO.Path.GetDirectoryName(filePath)!;
+        Directory.CreateDirectory(parentDirectory);
+        File.WriteAllText(filePath, string.Join("\n", lines) + "\n", new System.Text.UTF8Encoding(false));
+        return filePath;
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(Path))
