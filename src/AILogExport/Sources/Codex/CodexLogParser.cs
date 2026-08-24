@@ -41,7 +41,7 @@ public sealed class CodexLogParser
         var state = new ParseState(Path.GetFileNameWithoutExtension(fullPath));
         var lineNumber = 0;
 
-        foreach (var line in File.ReadLines(fullPath))
+        foreach (var line in JsonlFile.ReadLines(fullPath))
         {
             lineNumber++;
             if (string.IsNullOrWhiteSpace(line))

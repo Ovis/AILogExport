@@ -110,4 +110,21 @@ public sealed class CodexLogParserTests
 
         Assert.That(conversation.UpdatedAt, Is.EqualTo(new DateTimeOffset(expected)));
     }
+
+    [Test]
+    public void Parse_別プロセスが追記用に開いているログを読み取れる()
+    {
+        using var directory = new TestDirectory();
+        var path = directory.WriteJsonl(
+            """{"type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"使用中のログ"}]}}""");
+        using var writerHandle = new FileStream(
+            path,
+            FileMode.Open,
+            FileAccess.Write,
+            FileShare.ReadWrite);
+
+        var conversation = new CodexLogParser().Parse(path);
+
+        Assert.That(conversation.Messages.Single().Content, Is.EqualTo("使用中のログ"));
+    }
 }
