@@ -6,9 +6,17 @@ Claude CodeおよびCodexのローカルセッションログを、人間が読�
 
 ## 必要な環境
 
-- .NET 10 SDK
+利用する配布形式によって必要な環境が異なります。
+
+| 配布形式 | 必要な環境 |
+|---|---|
+| NuGet .NET Tool | .NET 10 SDK |
+| Windows x64 ランタイム必要版 | 64bit版Windows、.NET 10 Runtime |
+| Windows x64 ランタイム同梱版 | 64bit版Windows（.NETランタイム不要） |
 
 ## 実行方法
+
+### NuGet .NET Tool
 
 nuget.orgへの公開後は、グローバルToolとしてインストールできます。
 
@@ -22,6 +30,24 @@ ailogexport --help
 ```powershell
 dotnet tool update --global eSheepDev.AILogExport
 ```
+
+### GitHub Release
+
+[GitHub Releases](https://github.com/Ovis/AILogExport/releases)では、Windows x64向けに次のZIPを配布します。
+
+| ファイル | 内容 |
+|---|---|
+| `AILogExport-vX.Y.Z-win-x64-framework-dependent.zip` | .NET 10 Runtimeを使用する軽量版 |
+| `AILogExport-vX.Y.Z-win-x64-self-contained.zip` | .NETランタイムと依存ライブラリを単一EXEへ同梱した版 |
+
+利用するZIPを展開し、`AILogExport.exe` を実行します。
+
+```powershell
+.\AILogExport.exe --help
+.\AILogExport.exe claude "C:\Users\...\session.jsonl" -o "D:\session.md"
+```
+
+### ソースコード
 
 ソースコードから実行する場合は、以下のようにJSONLを直接指定して変換します。
 
@@ -70,6 +96,6 @@ dotnet test AILogExport.slnx -m:1
 
 ## リリース
 
-`v1.2.3` または `v1.2.3-beta.1` のようなタグをpushすると、GitHub ActionsがReleaseビルド、テスト、nuget.orgへの公開、GitHub Releaseの作成を行います。
+`v1.2.3` または `v1.2.3-beta.1` のようなタグをpushすると、GitHub ActionsがReleaseビルド、テスト、nuget.orgへの公開、Windows x64向け実行ファイルの作成、GitHub Releaseへの添付を行います。
 
 初回リリース前に必要なnuget.orgのTrusted Publishing設定と具体的な手順は[docs/releasing.md](docs/releasing.md)を参照してください。

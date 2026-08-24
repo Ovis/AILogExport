@@ -2,7 +2,17 @@
 
 ## 1. リリース成果物
 
-AILogExportは次の.NET Toolパッケージとして公開する。
+AILogExportはNuGet .NET Toolと、Windows x64向けの2種類のZIPとして公開する。
+
+| 成果物 | 配布先 | 実行環境 |
+|---|---|---|
+| `eSheepDev.AILogExport.X.Y.Z.nupkg` | nuget.org、GitHub Release | .NET 10 SDK |
+| `AILogExport-vX.Y.Z-win-x64-framework-dependent.zip` | GitHub Release | 64bit版Windows、.NET 10 Runtime |
+| `AILogExport-vX.Y.Z-win-x64-self-contained.zip` | GitHub Release | 64bit版Windows、.NETランタイム不要 |
+
+ランタイム必要版には実行ファイル、アプリケーション本体、依存ライブラリを格納する。同梱版は.NETランタイムと依存ライブラリを単一の `AILogExport.exe` へまとめる。
+
+NuGet .NET Toolの公開設定は次のとおりである。
 
 | 項目 | 値 |
 |---|---|
@@ -64,6 +74,35 @@ artifacts\tool-test\ailogexport.exe --help
 
 `artifacts` はGit管理対象外である。確認後はディレクトリごと削除してよい。
 
+Windows x64向けの両配布形式もローカルでpublishし、起動を確認する。
+
+```powershell
+dotnet restore src/AILogExport/AILogExport.csproj --runtime win-x64
+
+dotnet publish src/AILogExport/AILogExport.csproj `
+  -c Release `
+  -r win-x64 `
+  --self-contained false `
+  --no-restore `
+  -o artifacts/publish/win-x64-framework-dependent
+
+dotnet publish src/AILogExport/AILogExport.csproj `
+  -c Release `
+  -r win-x64 `
+  --self-contained true `
+  --no-restore `
+  -p:PublishSingleFile=true `
+  -p:IncludeNativeLibrariesForSelfExtract=true `
+  -p:DebugType=None `
+  -p:DebugSymbols=false `
+  -o artifacts/publish/win-x64-self-contained
+
+artifacts\publish\win-x64-framework-dependent\AILogExport.exe --help
+artifacts\publish\win-x64-self-contained\AILogExport.exe --help
+```
+
+同梱版の出力先には `AILogExport.exe` だけが存在することを確認する。
+
 ## 4. 正式リリース
 
 タグは必ず、パッケージ設定と `.github/workflows/publish.yml` を含み、Releaseビルドとテストが成功しているコミットへ付ける。
@@ -83,9 +122,11 @@ git push origin v0.1.0
 3. RestoreとReleaseビルドを行う
 4. NUnitテストを実行する
 5. `eSheepDev.AILogExport.0.1.0.nupkg` を作成する
-6. GitHub OIDCトークンをNuGetの短期APIキーへ交換する
-7. nupkgをnuget.orgへpushする
-8. nupkgを添付したGitHub Releaseを作成する
+6. Windows x64向けのランタイム必要版とランタイム同梱版をpublishする
+7. 両方のpublish結果をZIPへ圧縮する
+8. GitHub OIDCトークンをNuGetの短期APIキーへ交換する
+9. nupkgをnuget.orgへpushする
+10. nupkgと2種類のZIPを添付したGitHub Releaseを作成する
 
 プレリリース版は次の形式とする。
 
@@ -110,6 +151,8 @@ ailogexport --help
 ```powershell
 dotnet tool update --global eSheepDev.AILogExport --version 0.1.0
 ```
+
+GitHub Releaseから2種類のZIPをそれぞれダウンロードして展開し、`AILogExport.exe --help` が成功することも確認する。同梱版は、.NET 10 Runtimeをインストールしていない64bit版Windows環境で起動できることを確認する。
 
 ## 6. リリース失敗時の扱い
 
